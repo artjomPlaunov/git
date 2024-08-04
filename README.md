@@ -1,0 +1,1 @@
+Git compatible implementation of Git using Rust
