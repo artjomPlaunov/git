@@ -1,5 +1,6 @@
-use std::{env, fs, io, path::PathBuf, process};
+use std::{env, fs, io, path::{self, Path, PathBuf}, process};
 
+use blob::Blob;
 use chrono::Local;
 
 mod author;
@@ -35,10 +36,57 @@ fn init(dir: &str) -> io::Result<()> {
     Ok(())
 }
 
+#[derive(Debug)]
+enum Command {
+    Add,
+    Commit,
+    Init,
+    Unknown,
+}
+
+impl Command {
+    fn from_string(s: &str) -> Command {
+        match s {
+            "add" => Self::Add,
+            "commit" => Self::Commit,
+            "init" => Self::Init,
+            _ => Self::Unknown
+        }
+    }
+}
+
 fn main() -> io::Result<()> {
     let args = env::args().collect::<Vec<String>>();
+    dbg!(&args);
     let cmd = args.get(1).expect("Usage: {} <command> [<directory>]");
-    match Command::from(&cmd[..]) {
+    dbg!(Command::from_string(&cmd[..]));
+    match Command::from_string(&cmd[..]) {
+        Command::Add => {
+            // set up paths.
+            let git_path = utils::get_git_path();
+            let db_path = utils::get_db_path();
+            let root_path = utils::get_root_path();
+
+            // set up git data structures.
+            let workspace = workspace::Workspace::new(root_path.clone());
+            let database = database::Database::new(db_path);
+
+            // Initialize absolute path.
+            let pathname = args.get(2).expect("Nothing specified, nothing added.");
+            let path = Path::new(pathname);
+            let mut absolute_path = root_path.clone();
+            absolute_path.push(path);
+
+            // Get file data and store blob.
+            let data = workspace.read_data(&absolute_path)?;
+            let mut blob = blob::Blob::new(&data);
+            database.store(&mut blob)?;
+            let stat = workspace.stat_file(absolute_path.clone());
+
+            
+
+
+        }
         Command::Init => {
             let default_dir = &"./".to_string();
             let dir = args.get(2).unwrap_or(default_dir);
@@ -140,13 +188,6 @@ fn main() -> io::Result<()> {
         }
     }
     Ok(())
-}
-
-#[derive(Debug)]
-enum Command {
-    Init,
-    Commit,
-    Unknown,
 }
 
 impl From<&str> for Command {
