@@ -8,12 +8,14 @@ mod blob;
 mod commit;
 mod database;
 mod entry;
+mod index;
 mod lockfile;
 mod refs;
 mod traits;
 mod tree;
 mod utils;
 mod workspace;
+
 
 fn initialize_repo_directory(mut path_buf: PathBuf) -> io::Result<()> {
     path_buf.push(".git");
@@ -83,8 +85,8 @@ fn main() -> io::Result<()> {
             database.store(&mut blob)?;
             let stat = workspace.stat_file(absolute_path.clone());
 
-            
-
+            let entry = index::Entry::new(absolute_path, &blob.object_id, stat);
+            dbg!(entry);
 
         }
         Command::Init => {
