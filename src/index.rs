@@ -37,6 +37,7 @@ impl Entry {
             }
         }
 
+        // Just check executable bit for mode.
         let mode: [u8; 4] = if stat.permissions().mode() & 0o100 != 0 {
             // 0o100755 -> 0x81ED -> Big-endian padded with zero's.
             [0x00, 0x00, 0x81, 0xED]
@@ -46,7 +47,17 @@ impl Entry {
         };
 
 
-        let flag = cmp::min(0xFFF, pathname.len());
+        
+        let filename = path
+                    .clone()
+                    .file_name()
+                    .unwrap()
+                    .to_str()
+                    .unwrap()
+                    .to_string();
+
+        let flag = cmp::min(0xFFF, filename.len());
+
 
         Entry {
             ctime: stat.ctime().to_be_bytes()[4..8].try_into().expect("failure getting ctime."),
@@ -61,7 +72,7 @@ impl Entry {
             size: stat.size().to_be_bytes()[4..8].try_into().expect("failure getting size."),
             oid: Vec::from(object_id),
             flags: flag.to_be_bytes()[6..8].try_into().expect("failure setting file size flag."),
-            path: pathname,
+            path: filename,
         }
     }
 
@@ -79,11 +90,11 @@ impl Entry {
         res.extend_from_slice(&self.size);
         res.extend_from_slice(&self.oid);
         res.extend_from_slice(&self.flags);
-        res.push(0);
+        res.extend_from_slice(&self.path.as_bytes());
         if res.len()% 8 == 0 {
             res.extend_from_slice(&[0,0,0,0,0,0,0,0]);
         } else {
-            while !res.len()%8 == 0 {
+            while res.len()%8 != 0 {
                 res.push(0);
             }
         }
