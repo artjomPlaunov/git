@@ -81,3 +81,10 @@ pub fn get_db_path() -> PathBuf {
     db_path.push("objects");
     db_path
 }
+
+pub fn get_index_path() -> PathBuf {
+    let git_path = get_git_path();
+    let mut index_path = PathBuf::from(&git_path);
+    index_path.push("index");
+    index_path
+}

@@ -65,13 +65,14 @@ fn main() -> io::Result<()> {
     match Command::from_string(&cmd[..]) {
         Command::Add => {
             // set up paths.
-            let git_path = utils::get_git_path();
             let db_path = utils::get_db_path();
             let root_path = utils::get_root_path();
+            let index_path = utils::get_index_path();
 
             // set up git data structures.
             let workspace = workspace::Workspace::new(root_path.clone());
             let database = database::Database::new(db_path);
+            let mut index = index::Index::new(index_path);
 
             // Initialize absolute path.
             let pathname = args.get(2).expect("Nothing specified, nothing added.");
@@ -84,10 +85,8 @@ fn main() -> io::Result<()> {
             let mut blob = blob::Blob::new(&data);
             database.store(&mut blob)?;
             let stat = workspace.stat_file(absolute_path.clone());
-
-            let entry = index::Entry::new(absolute_path, &blob.object_id, stat);
-            dbg!(entry);
-
+            index.add(&absolute_path, &blob.object_id, stat);
+            index.write_updates();
         }
         Command::Init => {
             let default_dir = &"./".to_string();

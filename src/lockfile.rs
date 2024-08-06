@@ -29,9 +29,13 @@ pub struct LockFile {
 
 impl LockFile {
     pub fn new(path: PathBuf) -> Self {
+        let file_path = path.clone();
+        let mut lock_path = path.clone();
+        lock_path.set_extension("lock");
         Self {
-            file_path: path.join("HEAD"),
-            lock_path: path.join("HEAD.lock").clone(),
+            //file_path: path.join("HEAD"),
+            file_path,
+            lock_path,
             lock: None,
         }
     }
@@ -48,15 +52,6 @@ impl LockFile {
                 {
                     Ok(lock) => {
                         self.lock = Some(lock);
-                        // let duration_seconds = 100;
-
-                        // let start_time = Instant::now();
-
-                        // loop {
-                        //     if start_time.elapsed() >= Duration::from_secs(duration_seconds) {
-                        //         break;
-                        //     }
-                        // }
                         Ok(true)
                     }
                     Err(ref err) if err.kind() == io::ErrorKind::AlreadyExists => Ok(false),
@@ -80,7 +75,6 @@ impl LockFile {
             Ok(_) => {
                 let mut lock = self.lock.as_ref().unwrap();
                 let _ = lock.write_all(s.as_bytes());
-                //unchecked result
                 Ok(())
             }
             Err(err) => Err(err),
