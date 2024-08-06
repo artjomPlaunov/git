@@ -22,8 +22,8 @@ impl fmt::Display for LockfileError {
 }
 
 pub struct LockFile {
-    file_path: PathBuf,
-    lock_path: PathBuf,
+    pub file_path: PathBuf,
+    pub lock_path: PathBuf,
     lock: Option<File>,
 }
 
@@ -33,7 +33,6 @@ impl LockFile {
         let mut lock_path = path.clone();
         lock_path.set_extension("lock");
         Self {
-            //file_path: path.join("HEAD"),
             file_path,
             lock_path,
             lock: None,

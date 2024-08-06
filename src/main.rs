@@ -1,4 +1,8 @@
-use std::{env, fs, io, path::{self, Path, PathBuf}, process};
+use std::{
+    env, fs, io,
+    path::{self, Path, PathBuf},
+    process,
+};
 
 use blob::Blob;
 use chrono::Local;
@@ -15,7 +19,6 @@ mod traits;
 mod tree;
 mod utils;
 mod workspace;
-
 
 fn initialize_repo_directory(mut path_buf: PathBuf) -> io::Result<()> {
     path_buf.push(".git");
@@ -52,7 +55,7 @@ impl Command {
             "add" => Self::Add,
             "commit" => Self::Commit,
             "init" => Self::Init,
-            _ => Self::Unknown
+            _ => Self::Unknown,
         }
     }
 }

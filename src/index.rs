@@ -1,5 +1,11 @@
 use core::panic;
-use std::{cmp, collections::HashMap, fs::Metadata, os::unix::fs::{MetadataExt, PermissionsExt}, path::PathBuf};
+use std::{
+    cmp,
+    collections::HashMap,
+    fs::Metadata,
+    os::unix::fs::{MetadataExt, PermissionsExt},
+    path::PathBuf,
+};
 
 use sha1::{digest::core_api::CoreWrapper, Digest, Sha1, Sha1Core};
 
@@ -19,13 +25,11 @@ pub struct Entry {
     pub size: [u8; 4],
     pub oid: Vec<u8>,
     pub flags: [u8; 2],
-    pub path: String
+    pub path: String,
 }
 
 impl Entry {
-
     pub fn new(path: PathBuf, object_id: &str, stat: Metadata) -> Self {
-        
         let mut pathname = String::new();
         match path.to_str() {
             Some(s) => {
@@ -42,41 +46,62 @@ impl Entry {
             // 0o100755 -> 0x81ED -> Big-endian padded with zero's.
             [0x00, 0x00, 0x81, 0xED]
         } else {
-            // 0o100644 -> 0x81A4 -> Big-endian padded with zero's. 
+            // 0o100644 -> 0x81A4 -> Big-endian padded with zero's.
             [0x00, 0x00, 0x81, 0xA4]
         };
 
-
-        
         let filename = path
-                    .clone()
-                    .file_name()
-                    .unwrap()
-                    .to_str()
-                    .unwrap()
-                    .to_string();
+            .clone()
+            .file_name()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .to_string();
 
         let flag = cmp::min(0xFFF, filename.len());
 
-
         Entry {
-            ctime: stat.ctime().to_be_bytes()[4..8].try_into().expect("failure getting ctime."),
-            ctime_nsec: stat.ctime_nsec().to_be_bytes()[4..8].try_into().expect("failure getting ctime_nsec."),
-            mtime: stat.mtime().to_be_bytes()[4..8].try_into().expect("failure getting ctime."),
-            mtime_nsec: stat.mtime_nsec().to_be_bytes()[4..8].try_into().expect("failure getting mtime_nsec."),
-            dev: stat.dev().to_be_bytes()[4..8].try_into().expect("failure getting dev."),
-            ino: stat.ino().to_be_bytes()[4..8].try_into().expect("failure getting ino."),
+            ctime: stat.ctime().to_be_bytes()[4..8]
+                .try_into()
+                .expect("failure getting ctime."),
+            ctime_nsec: stat.ctime_nsec().to_be_bytes()[4..8]
+                .try_into()
+                .expect("failure getting ctime_nsec."),
+            mtime: stat.mtime().to_be_bytes()[4..8]
+                .try_into()
+                .expect("failure getting ctime."),
+            mtime_nsec: stat.mtime_nsec().to_be_bytes()[4..8]
+                .try_into()
+                .expect("failure getting mtime_nsec."),
+            dev: stat.dev().to_be_bytes()[4..8]
+                .try_into()
+                .expect("failure getting dev."),
+            ino: stat.ino().to_be_bytes()[4..8]
+                .try_into()
+                .expect("failure getting ino."),
             mode: mode,
-            uid: stat.uid().to_be_bytes().try_into().expect("failure getting uid."),
-            gid: stat.gid().to_be_bytes().try_into().expect("failure getting gid."),
-            size: stat.size().to_be_bytes()[4..8].try_into().expect("failure getting size."),
+            uid: stat
+                .uid()
+                .to_be_bytes()
+                .try_into()
+                .expect("failure getting uid."),
+            gid: stat
+                .gid()
+                .to_be_bytes()
+                .try_into()
+                .expect("failure getting gid."),
+            size: stat.size().to_be_bytes()[4..8]
+                .try_into()
+                .expect("failure getting size."),
             oid: Vec::from(object_id),
-            flags: flag.to_be_bytes()[6..8].try_into().expect("failure setting file size flag."),
+            flags: flag.to_be_bytes()[6..8]
+                .try_into()
+                .expect("failure setting file size flag."),
             path: filename,
         }
     }
 
-    fn to_string(& self) -> String {
+    fn to_string(&self) -> String {
         let mut res: Vec<u8> = Vec::new();
         res.extend_from_slice(&self.ctime);
         res.extend_from_slice(&self.ctime_nsec);
@@ -91,10 +116,10 @@ impl Entry {
         res.extend_from_slice(&self.oid);
         res.extend_from_slice(&self.flags);
         res.extend_from_slice(&self.path.as_bytes());
-        if res.len()% 8 == 0 {
-            res.extend_from_slice(&[0,0,0,0,0,0,0,0]);
+        if res.len() % 8 == 0 {
+            res.extend_from_slice(&[0, 0, 0, 0, 0, 0, 0, 0]);
         } else {
-            while res.len()%8 != 0 {
+            while res.len() % 8 != 0 {
                 res.push(0);
             }
         }
@@ -102,9 +127,8 @@ impl Entry {
         unsafe {
             s = String::from_utf8_unchecked(res);
         }
-        return s
+        return s;
     }
-
 }
 
 pub struct Index {
@@ -118,8 +142,8 @@ impl Index {
         Self {
             entries: HashMap::new(),
             lockfile: LockFile::new(path),
-            digest: Sha1::new()
-        } 
+            digest: Sha1::new(),
+        }
     }
 
     pub fn add(&mut self, path: &PathBuf, object_id: &str, stat: Metadata) {
@@ -141,16 +165,19 @@ impl Index {
         let lock_res = self.lockfile.hold_for_update();
         let bool = match lock_res {
             Ok(_) => true,
-            Err(_) => false
+            Err(_) => false,
         };
         if !bool {
-            return bool
+            return bool;
         }
+        dbg!(&self.lockfile.file_path);
 
         // hash index header
-        let mut header :Vec<u8> = Vec::new();
+        let mut header: Vec<u8> = Vec::new();
         header.extend_from_slice(String::from("DIRC").as_bytes());
-        let size : [u8; 4] = self.entries.len().to_be_bytes()[4..8].try_into().expect("failure getting ino.");
+        let size: [u8; 4] = self.entries.len().to_be_bytes()[4..8]
+            .try_into()
+            .expect("failure getting ino.");
         header.extend_from_slice(&[0x00, 0x00, 0x00, 0x02]);
         header.extend_from_slice(&size);
         self.write(header);
@@ -169,7 +196,9 @@ impl Index {
 
     pub fn write(&mut self, data: Vec<u8>) {
         unsafe {
-            let _ = self.lockfile.write(String::from_utf8_unchecked(data.clone()));
+            let _ = self
+                .lockfile
+                .write(String::from_utf8_unchecked(data.clone()));
         }
         self.digest.update(&data);
     }
@@ -178,9 +207,10 @@ impl Index {
         let hash_result = self.digest.clone().finalize();
         let hash_result = hash_result.as_slice().to_vec();
         unsafe {
-            let _ = self.lockfile.write(String::from_utf8_unchecked(hash_result.clone()));
+            let _ = self
+                .lockfile
+                .write(String::from_utf8_unchecked(hash_result.clone()));
         }
+        let _ = self.lockfile.commit();
     }
-
-
 }
