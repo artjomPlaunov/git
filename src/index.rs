@@ -132,6 +132,7 @@ impl Entry {
 }
 
 pub struct Index {
+    keys: Vec<String>,
     entries: HashMap<String, Entry>,
     lockfile: LockFile,
     digest: CoreWrapper<Sha1Core>,
@@ -140,10 +141,21 @@ pub struct Index {
 impl Index {
     pub fn new(path: PathBuf) -> Self {
         Self {
+            keys: Vec::new(),
             entries: HashMap::new(),
             lockfile: LockFile::new(path),
             digest: Sha1::new(),
         }
+    }
+
+    pub fn each_entry(&mut self) -> Vec<Entry> {
+        self.keys.sort();
+        let mut entries = Vec::new();
+        for k in &self.keys {
+            let entry = self.entries.get(&k.clone()).unwrap();
+            entries.push(entry.clone());
+        }
+        entries 
     }
 
     pub fn add(&mut self, path: &PathBuf, object_id: &str, stat: Metadata) {
@@ -158,7 +170,8 @@ impl Index {
                 panic!();
             }
         }
-        self.entries.insert(pathname, entry);
+        self.entries.insert(pathname.clone(), entry);
+        self.keys.push(pathname);
     }
 
     pub fn write_updates(&mut self) -> bool {
@@ -170,7 +183,6 @@ impl Index {
         if !bool {
             return bool;
         }
-        dbg!(&self.lockfile.file_path);
 
         // hash index header
         let mut header: Vec<u8> = Vec::new();
@@ -183,7 +195,7 @@ impl Index {
         self.write(header);
 
         let mut data_vec = Vec::new();
-        for (_, entry) in &mut self.entries {
+        for entry in &mut self.each_entry() {
             let data = Vec::from(entry.clone().to_string().as_bytes());
             data_vec.push(data);
         }
@@ -204,7 +216,7 @@ impl Index {
     }
 
     pub fn finish_write(&mut self) {
-        let hash_result = self.digest.clone().finalize();
+        let hash_result = &self.digest.to_owned.finalize();
         let hash_result = hash_result.as_slice().to_vec();
         unsafe {
             let _ = self

@@ -78,18 +78,22 @@ fn main() -> io::Result<()> {
             let mut index = index::Index::new(index_path);
 
             // Initialize absolute path.
-            let pathname = args.get(2).expect("Nothing specified, nothing added.");
-            let path = Path::new(pathname);
-            let mut absolute_path = root_path.clone();
-            absolute_path.push(path);
+            let args: Vec<String> = env::args().collect();
 
-            // Get file data and store blob.
-            let data = workspace.read_data(&absolute_path)?;
-            let mut blob = blob::Blob::new(&data);
-            database.store(&mut blob)?;
-            let stat = workspace.stat_file(absolute_path.clone());
-            index.add(&absolute_path, &blob.object_id, stat);
-            index.write_updates();
+            // Iterate over arguments starting from index 2
+            for pathname in args.iter().skip(2) {
+                let path = Path::new(pathname);
+                let mut absolute_path = root_path.clone();
+                absolute_path.push(path);
+
+                // Get file data and store blob.
+                let data = workspace.read_data(&absolute_path)?;
+                let mut blob = blob::Blob::new(&data);
+                database.store(&mut blob)?;
+                let stat = workspace.stat_file(absolute_path.clone());
+                index.add(&absolute_path, &blob.object_id, stat);
+                index.write_updates();
+            }
         }
         Command::Init => {
             let default_dir = &"./".to_string();
