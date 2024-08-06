@@ -216,7 +216,7 @@ impl Index {
     }
 
     pub fn finish_write(&mut self) {
-        let hash_result = &self.digest.to_owned.finalize();
+        let hash_result = &self.digest.clone().finalize();
         let hash_result = hash_result.as_slice().to_vec();
         unsafe {
             let _ = self

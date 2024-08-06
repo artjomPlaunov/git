@@ -92,8 +92,8 @@ fn main() -> io::Result<()> {
                 database.store(&mut blob)?;
                 let stat = workspace.stat_file(absolute_path.clone());
                 index.add(&absolute_path, &blob.object_id, stat);
-                index.write_updates();
             }
+            index.write_updates();
         }
         Command::Init => {
             let default_dir = &"./".to_string();
