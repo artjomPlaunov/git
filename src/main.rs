@@ -64,7 +64,6 @@ fn main() -> io::Result<()> {
     let args = env::args().collect::<Vec<String>>();
     dbg!(&args);
     let cmd = args.get(1).expect("Usage: {} <command> [<directory>]");
-    dbg!(Command::from_string(&cmd[..]));
     match Command::from_string(&cmd[..]) {
         Command::Add => {
             // set up paths.
@@ -82,16 +81,16 @@ fn main() -> io::Result<()> {
 
             // Iterate over arguments starting from index 2
             for pathname in args.iter().skip(2) {
-                let path = Path::new(pathname);
-                let mut absolute_path = root_path.clone();
-                absolute_path.push(path);
+                let paths = workspace.list_files(&PathBuf::from(pathname)).unwrap();
+                for path in paths {
 
-                // Get file data and store blob.
-                let data = workspace.read_data(&absolute_path)?;
-                let mut blob = blob::Blob::new(&data);
-                database.store(&mut blob)?;
-                let stat = workspace.stat_file(absolute_path.clone());
-                index.add(&absolute_path, &blob.object_id, stat);
+                    // Get file data and store blob.
+                    let data = workspace.read_data(&path)?;
+                    let mut blob = blob::Blob::new(&data);
+                    database.store(&mut blob)?;
+                    let stat = workspace.stat_file(path.clone());
+                    index.add(&path, &blob.object_id, stat);
+                }
             }
             index.write_updates();
         }
@@ -120,7 +119,6 @@ fn main() -> io::Result<()> {
             let refs = refs::Refs::new(git_path.clone());
 
             // Read current workspace files into Entry vector (used to construct Tree).
-
             let files = workspace.list_files(&root_path.clone())?;
             dbg!(&files);
             let mut entries = Vec::new();

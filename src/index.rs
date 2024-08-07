@@ -50,15 +50,7 @@ impl Entry {
             [0x00, 0x00, 0x81, 0xA4]
         };
 
-        let filename = path
-            .clone()
-            .file_name()
-            .unwrap()
-            .to_str()
-            .unwrap()
-            .to_string();
-
-        let flag = cmp::min(0xFFF, filename.len());
+        let flag = cmp::min(0xFFF, pathname.len());
 
         Entry {
             ctime: stat.ctime().to_be_bytes()[4..8]
@@ -97,7 +89,7 @@ impl Entry {
             flags: flag.to_be_bytes()[6..8]
                 .try_into()
                 .expect("failure setting file size flag."),
-            path: filename,
+            path: pathname,
         }
     }
 
@@ -155,7 +147,7 @@ impl Index {
             let entry = self.entries.get(&k.clone()).unwrap();
             entries.push(entry.clone());
         }
-        entries 
+        entries
     }
 
     pub fn add(&mut self, path: &PathBuf, object_id: &str, stat: Metadata) {

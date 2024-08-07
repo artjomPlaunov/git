@@ -20,47 +20,44 @@ impl Workspace {
     }
 
     pub fn read_data(&self, path: &Path) -> io::Result<String> {
-        dbg!(&path);
-        fs::read_to_string(path)
+        let mut absolute_path = self.path.clone();
+        absolute_path.push(path);
+        fs::read_to_string(absolute_path)
     }
 
     pub fn list_files(&self, cur_path: &PathBuf) -> io::Result<Vec<PathBuf>> {
-        let read_files_res = fs::read_dir(cur_path);
+        let metadata = fs::metadata(cur_path)?;
         let mut v = Vec::new();
+        if metadata.is_dir() {
 
-        match read_files_res {
-            Ok(read_files) => {
-                for file in read_files {
-                    let path = file?.path();
-                    if self.ignore.into_iter().all(|x| !path.ends_with(x)) {
-                        if path.is_dir() {
-                            let mut files_from_dir = Self::list_files(self, &path.clone())?;
-                            v.append(&mut files_from_dir);
-                        } else if path.is_file() {
-                            // Strip root path.
-                            let absolute_path = path.as_path();
-                            let root_path = self.path.as_path();
-                            let relative_path = absolute_path.strip_prefix(root_path);
-                            // TODO: add custom error types and use the ? instead of pattern matching
-                            match relative_path {
-                                Ok(relative_path) => {
-                                    v.push(relative_path.to_path_buf());
-                                }
-                                Err(_) => {
-                                    eprintln!(
-                                        "Workspace::list_files error strippping relative path"
-                                    );
-                                    process::exit(1);
+            let read_files_res = fs::read_dir(cur_path);
+            match read_files_res {
+                Ok(read_files) => {
+                    for file in read_files {
+                        let path = file?.path();
+                        if self.ignore.into_iter().all(|x| !path.ends_with(x)) {
+                            if path.is_dir() {
+                                let mut files_from_dir = Self::list_files(self, &path.clone())?;
+                                v.append(&mut files_from_dir);
+                            } else if path.is_file() {
+                                // Strip root path.
+                                let absolute_path = path.as_path();
+                                let relative_path = absolute_path.strip_prefix(self.path.clone());
+                                match relative_path {
+                                    Ok(p) => v.push(PathBuf::from(p)),
+                                    Err(_) => v.push(PathBuf::from(absolute_path))
                                 }
                             }
                         }
                     }
                 }
+                Err(_) => {
+                    eprintln!("error reading files in current directory");
+                    process::exit(1);
+                }
             }
-            Err(_) => {
-                eprintln!("error reading files in current directory");
-                process::exit(1);
-            }
+        } else {
+            v.push(cur_path.clone());
         }
         Ok(v)
     }
